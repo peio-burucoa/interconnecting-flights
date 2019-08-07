@@ -1,0 +1,20 @@
+[
+	{
+		"airportFrom": "LUZ",
+		"airportTo": "STN",
+		"connectingAirport": null,
+		"newRoute": false,
+		"seasonalRoute": false,
+		"operator": "RYANAIR",
+		"group": "ETHNIC"
+	},
+	{
+		"airportFrom": "CHQ",
+		"airportTo": "SKG",
+		"connectingAirport": null,
+		"newRoute": false,
+		"seasonalRoute": false,
+		"operator": "RYANAIR",
+		"group": "DOMESTIC"
+	}
+]
