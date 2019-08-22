@@ -17,7 +17,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.ryanair.flights.model.Route;
 import com.ryanair.flights.model.Schedule;
-import com.ryanair.flights.utils.DateUtils;
+import com.ryanair.flights.utils.DateTimeUtils;
 
 @SpringBootApplication
 @RestController
@@ -47,8 +47,8 @@ public class MainApplication {
 		}
 
 		// available flights for given departure/arrival airport IATA codes, a year and a month
-		int year = DateUtils.getYear(departureDateTime);
-		int month = DateUtils.getMonth(departureDateTime);
+		int year = DateTimeUtils.getYear(departureDateTime);
+		int month = DateTimeUtils.getMonth(departureDateTime);
 		Schedule schedule = getSchedule(restTemplate, departure, arrival, year, month);
 
 		// TODO: search for possible interconnecting flights
