@@ -3,6 +3,7 @@ package com.ryanair.flights;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -15,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ryanair.flights.model.Interconnection;
 import com.ryanair.flights.model.Route;
 import com.ryanair.flights.model.Schedule;
 import com.ryanair.flights.utils.DateTimeUtils;
@@ -37,13 +41,13 @@ public class MainApplication {
 			@RequestParam("departure") String departure,
 			@RequestParam("arrival") String arrival,
 			@RequestParam("departureDateTime") String departureDateTime,
-			@RequestParam("arrivalDateTime") String arrivalDateTime) throws ParseException {
+			@RequestParam("arrivalDateTime") String arrivalDateTime) throws ParseException, JsonProcessingException {
 		RestTemplate restTemplate = new RestTemplate();
 
 		// available routes based on the airport's IATA codes
 		Set<Route> routes = getRoutes(restTemplate, departure, arrival);
 		if (routes.isEmpty()) {
-			// TODO
+			return ""; // no direct flights
 		}
 
 		// available flights for given departure/arrival airport IATA codes, a year and a month
@@ -51,11 +55,14 @@ public class MainApplication {
 		int month = DateTimeUtils.getMonth(departureDateTime);
 		Schedule schedule = getSchedule(restTemplate, departure, arrival, year, month);
 
-		// TODO: search for possible interconnecting flights
+		// search for possible interconnecting flights
+		DirectFlightSearcher directFlightSearcher = new DirectFlightSearcher(departure, arrival, departureDateTime, arrivalDateTime);
+		List<Interconnection> directFlights = directFlightSearcher.search(schedule);
 
-		return "Departure: " + departure + ", Arrival: " + arrival + ", Number of routes: " + routes.size();
+		// convert interconnecting flights to JSON
+		return new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(directFlights);
 	}
-	
+
 	private Set<Route> getRoutes(RestTemplate restTemplate, String departure, String arrival) {
 		Route[] routes = restTemplate.getForObject(ROUTES_URL, Route[].class);
 		

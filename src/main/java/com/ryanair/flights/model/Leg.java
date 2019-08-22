@@ -6,6 +6,13 @@ public class Leg {
 	private String departureDateTime;
 	private String arrivalDateTime;
 
+	public Leg(String departureAirport, String arrivalAirport, String departureDateTime, String arrivalDateTime) {
+		this.departureAirport = departureAirport;
+		this.arrivalAirport = arrivalAirport;
+		this.departureDateTime = departureDateTime;
+		this.arrivalDateTime = arrivalDateTime;
+	}
+
 	public String getDepartureAirport() {
 		return departureAirport;
 	}

@@ -44,4 +44,12 @@ public class DateTimeUtils {
 		calendar.setTime(date);
 		return calendar.get(Calendar.MINUTE);
 	}
+
+	public static String getDate(String dateTime, String time) throws ParseException {
+		Calendar calendar = Calendar.getInstance();
+		int hourOfDay = TimeUtils.getHour(time);
+		int minute = TimeUtils.getMinute(time);
+		calendar.set(getYear(dateTime), getMonth(dateTime), getDayOfMonth(dateTime), hourOfDay, minute);
+		return DATE_TIME_FORMAT.format(calendar.getTime());
+	}
 }

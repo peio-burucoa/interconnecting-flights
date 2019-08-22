@@ -56,4 +56,8 @@ public class DateTimeUtilsTest {
 	public void testGetMinute_ParseException() throws ParseException {
 		DateTimeUtils.getMinute("23:50");
 	}
+
+	public void testGetDate() throws ParseException {
+		Assert.assertEquals("2019-03-14T22:15", DateTimeUtils.getDate("2019-03-14T23:50", "22:15"));
+	}
 }

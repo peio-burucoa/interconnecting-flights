@@ -9,7 +9,7 @@ public class Day {
 	private int day; // day of a month
 	private List<Flight> flights; // list of flights for a given day
 
-	public Integer getDay() {
+	public int getDay() {
 		return day;
 	}
 
