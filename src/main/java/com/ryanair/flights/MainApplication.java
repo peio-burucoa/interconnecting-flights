@@ -2,35 +2,32 @@ package com.ryanair.flights;
 
 import java.text.ParseException;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ryanair.flights.controller.RoutesController;
+import com.ryanair.flights.controller.ScheduleController;
 import com.ryanair.flights.model.Interconnection;
-import com.ryanair.flights.model.Route;
+import com.ryanair.flights.model.Leg;
 import com.ryanair.flights.model.Schedule;
 import com.ryanair.flights.utils.DateTimeUtils;
 
 @SpringBootApplication
 @RestController
 public class MainApplication {
-	private static final String RYANAIR = "RYANAIR";
-	private static final String SCHEDULES_URL = "https://services-api.ryanair.com/timtbl/3/schedules/{departure}/{arrival}/years/{year}/months/{month}";
-	private static final String ROUTES_URL = "https://services-api.ryanair.com/locate/3/routes";
-
-	// private static final Logger log = LoggerFactory.getLogger(MainApplication.class);
+	private RoutesController routesController = new RoutesController();
+	private ScheduleController scheduleController = new ScheduleController();
+	private ItinerariesFinder itinerariesFinder = new ItinerariesFinder(routesController);
 
 	public static void main(String[] args) {
 		SpringApplication.run(MainApplication.class, args);
@@ -42,46 +39,53 @@ public class MainApplication {
 			@RequestParam("arrival") String arrival,
 			@RequestParam("departureDateTime") String departureDateTime,
 			@RequestParam("arrivalDateTime") String arrivalDateTime) throws ParseException, JsonProcessingException {
-		RestTemplate restTemplate = new RestTemplate();
 
-		// available routes based on the airport's IATA codes
-		Set<Route> routes = getRoutes(restTemplate, departure, arrival);
-		if (routes.isEmpty()) {
-			return ""; // no direct flights
+		// possible itineraries based on the airport's IATA codes
+		Set<List<String>> itineraries = itinerariesFinder.getItineraries(departure, arrival);
+
+		if (itineraries.isEmpty()) {
+			return ""; // no direct nor interconnected flights
 		}
 
-		// available flights for given departure/arrival airport IATA codes, a year and a month
+		Set<Interconnection> interconnections = new HashSet<>();
 		int year = DateTimeUtils.getYear(departureDateTime);
 		int month = DateTimeUtils.getMonth(departureDateTime);
-		Schedule schedule = getSchedule(restTemplate, departure, arrival, year, month);
 
-		// search for possible interconnecting flights
-		DirectFlightSearcher directFlightSearcher = new DirectFlightSearcher(departure, arrival, departureDateTime, arrivalDateTime);
-		List<Interconnection> directFlights = directFlightSearcher.search(schedule);
+		for (List<String> itinerary : itineraries) {
+			switch (itinerary.size()) {
+			case 2: // direct flights
+				Schedule schedule = scheduleController.getSchedule(departure, arrival, year, month);
+				if (schedule == null) {
+					continue;
+				}
+
+				LegFinder directLegFinder = new LegFinder(departure, arrival, departureDateTime, arrivalDateTime);
+				Set<Leg> legs = directLegFinder.getLegs(schedule);
+				legs.forEach(leg -> interconnections.add(new Interconnection(0, Collections.singletonList(leg))));
+				break;
+			case 3: // interconnecting flights
+				String intermediate = itinerary.get(1);
+				Schedule schedule1 = scheduleController.getSchedule(departure, intermediate, year, month);
+				Schedule schedule2 = scheduleController.getSchedule(intermediate, arrival, year, month);
+				if (schedule1 == null || schedule2 == null) {
+					continue;
+				}
+
+				LegFinder legFinder = new LegFinder(departure, intermediate, departureDateTime, arrivalDateTime);
+				Set<Leg> legs1 = legFinder.getLegs(schedule1);
+
+				// search for possible interconnecting flights
+				for (Leg leg1 : legs1) {
+					String intermediateDateTime = DateTimeUtils.addTwoHours(leg1.getArrivalDateTime());
+					legFinder = new LegFinder(intermediate, arrival, intermediateDateTime, arrivalDateTime);
+					Set<Leg> legs2 = legFinder.getLegs(schedule2);
+					legs2.forEach(leg2 -> interconnections.add(new Interconnection(1, Arrays.asList(leg1, leg2))));
+				}
+				break;
+			}
+		}
 
 		// convert interconnecting flights to JSON
-		return new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(directFlights);
-	}
-
-	private Set<Route> getRoutes(RestTemplate restTemplate, String departure, String arrival) {
-		Route[] routes = restTemplate.getForObject(ROUTES_URL, Route[].class);
-		
-		Predicate<Route> predicate = route -> route.getConnectingAirport() == null // only routes with connectingAirport set to null should be used
-			&& route.getOperator().equals(RYANAIR) // only routes with operator set to RYANAIR should be used
-			&& route.getAirportFrom().equals(departure)
-			&& route.getAirportTo().equals(arrival);
-
-		return Arrays.asList(routes).stream()
-			.filter(predicate)
-			.collect(Collectors.toSet());
-	}
-
-	private Schedule getSchedule(RestTemplate restTemplate, String departure, String arrival, int year, int month) {
-		Map<String, Object> uriVariables = new HashMap<>();
-		uriVariables.put("departure", departure);
-		uriVariables.put("arrival", arrival);
-		uriVariables.put("year", year);
-		uriVariables.put("month", month);
-		return restTemplate.getForObject(SCHEDULES_URL, Schedule.class, uriVariables);
+		return new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(interconnections);
 	}
 }

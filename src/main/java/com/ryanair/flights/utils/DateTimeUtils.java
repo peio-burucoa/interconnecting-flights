@@ -52,4 +52,14 @@ public class DateTimeUtils {
 		calendar.set(getYear(dateTime), getMonth(dateTime), getDayOfMonth(dateTime), hourOfDay, minute);
 		return DATE_TIME_FORMAT.format(calendar.getTime());
 	}
+
+	public static String addTwoHours(String dateTime) throws ParseException {
+		Date date = DATE_TIME_FORMAT.parse(dateTime);
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(date);
+		if (calendar.get(Calendar.HOUR) < 22) {
+			calendar.add(Calendar.HOUR, 2);
+		}
+		return DATE_TIME_FORMAT.format(calendar.getTime());
+	}
 }

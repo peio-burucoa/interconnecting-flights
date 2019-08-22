@@ -1,34 +1,31 @@
 package com.ryanair.flights;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.ryanair.flights.model.Day;
 import com.ryanair.flights.model.Flight;
-import com.ryanair.flights.model.Interconnection;
 import com.ryanair.flights.model.Leg;
 import com.ryanair.flights.model.Schedule;
 import com.ryanair.flights.utils.DateTimeUtils;
 import com.ryanair.flights.utils.TimeUtils;
 
-public class DirectFlightSearcher {
-
+public class LegFinder {
 	private String departure;
 	private String arrival;
 	private String departureDateTime;
 	private String arrivalDateTime;
 
-	public DirectFlightSearcher(String departure, String arrival, String departureDateTime, String arrivalDateTime) {
+	public LegFinder(String departure, String arrival, String departureDateTime, String arrivalDateTime) {
 		this.departure = departure;
 		this.arrival = arrival;
 		this.departureDateTime = departureDateTime;
 		this.arrivalDateTime = arrivalDateTime;
 	}
 
-	public List<Interconnection> search(Schedule schedule) throws ParseException {
-		List<Interconnection> interconnections = new ArrayList<>();
+	public Set<Leg> getLegs(Schedule schedule) throws ParseException {
+		Set<Leg> legs = new HashSet<>();
 
 		// assuming departure day = arrival day
 		int dayOfMonth = DateTimeUtils.getDayOfMonth(departureDateTime);
@@ -40,13 +37,12 @@ public class DirectFlightSearcher {
 						String flightDepartureDateTime = DateTimeUtils.getDate(departureDateTime, flight.getDepartureTime());
 						String flighArrivalDateTime = DateTimeUtils.getDate(arrivalDateTime, flight.getArrivalTime());
 						Leg leg = new Leg(departure, arrival, flightDepartureDateTime, flighArrivalDateTime);
-						interconnections.add(new Interconnection(0, Collections.singletonList(leg)));
+						legs.add(leg);
 					}
 				}
 			}
 		}
-
-		return interconnections;
+		return legs;
 	}
 
 	public boolean isFlightDepartureTimeValid(String flightDepartureTime) throws ParseException {

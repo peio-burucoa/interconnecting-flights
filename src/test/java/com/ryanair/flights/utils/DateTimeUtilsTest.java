@@ -60,4 +60,8 @@ public class DateTimeUtilsTest {
 	public void testGetDate() throws ParseException {
 		Assert.assertEquals("2019-03-14T22:15", DateTimeUtils.getDate("2019-03-14T23:50", "22:15"));
 	}
+
+	public void testAddTwoHours() throws ParseException {
+		Assert.assertEquals("2019-01-01T14:00", DateTimeUtils.addTwoHours("2019-01-01T12:00"));
+	}
 }
